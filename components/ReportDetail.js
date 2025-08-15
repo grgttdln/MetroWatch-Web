@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { db } from "../utils/supabase/api";
 
 const statusOptions = [
   { value: "pending", label: "Pending", color: "bg-yellow-500" },
+  { value: "not resolved", label: "Not Resolved", color: "bg-orange-500" },
   { value: "ongoing", label: "Ongoing", color: "bg-blue-500" },
   { value: "resolved", label: "Resolved", color: "bg-green-500" },
   { value: "dismissed", label: "Dismissed", color: "bg-gray-500" },
@@ -39,11 +41,21 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
     setIsSubmitting(true);
 
     try {
-      // Here you would typically make an API call to update the report
-      // For now, we'll just simulate the update
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      // Update the report status in the database
+      const { data, error } = await db.update(
+        "reports",
+        { status: selectedStatus },
+        { report_id: report.report_id }
+      );
 
-      if (onUpdateReport) {
+      if (error) {
+        throw new Error(error.message || "Failed to update report status");
+      }
+
+      console.log("Report status updated successfully:", data);
+
+      // Update the local state if onUpdateReport callback is provided
+      if (onUpdateReport && data && data[0]) {
         onUpdateReport({
           ...report,
           status: selectedStatus,
@@ -60,8 +72,12 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
       }
 
       setComment("");
+
+      // Show success message (you could add a toast notification here)
+      alert("Report status updated successfully!");
     } catch (error) {
       console.error("Error updating report:", error);
+      alert(`Error updating report: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +139,11 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
                 }`}
               ></div>
               <span className="text-blue-200 font-medium">
-                {currentStatusOption?.label || "Unknown Status"}
+                {currentStatusOption?.label ||
+                  (selectedStatus
+                    ? selectedStatus.charAt(0).toUpperCase() +
+                      selectedStatus.slice(1)
+                    : "Pending")}
               </span>
             </div>
           </div>
@@ -134,7 +154,7 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
               <img
                 src={report.url}
                 alt="Report"
-                className="w-full h-64 object-cover"
+                className="w-full h-96 object-cover"
               />
             </div>
           )}
@@ -190,7 +210,7 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
                   </svg>
                 </div>
                 <span className="font-medium">
-                  {report.user_id || "John Doe"}
+                  {report.users?.name || "Unknown User"}
                 </span>
               </div>
             </div>

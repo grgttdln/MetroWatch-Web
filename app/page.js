@@ -41,7 +41,7 @@ export default function HomePage() {
       try {
         const { data, error } = await db.select(
           "reports",
-          "report_id, latitude, longitude, severity, category, description, date, time, location, url, user_id, upvote"
+          "report_id, latitude, longitude, severity, category, description, date, time, location, url, user_id, upvote, status, users(name)"
         );
         if (error) {
           console.error("Database error:", error);
@@ -184,6 +184,12 @@ export default function HomePage() {
     }
   };
 
+  const handleMapNavigation = (coordinates, zoom = 15) => {
+    if (mapRef.current && coordinates) {
+      mapRef.current.setView(coordinates, zoom);
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen overflow-hidden bg-gray-50">
       {/* Mobile Toggle Button */}
@@ -323,12 +329,6 @@ export default function HomePage() {
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-600 border border-white/80 shadow-sm flex-shrink-0"></div>
                 <span className="text-sm font-medium text-gray-700">Low</span>
               </div>
-              <div className="flex items-center gap-2 min-h-4">
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-500 border border-white/80 shadow-sm flex-shrink-0"></div>
-                <span className="text-sm font-medium text-gray-700">
-                  Unknown
-                </span>
-              </div>
             </div>
           </div>
         )}
@@ -354,6 +354,7 @@ export default function HomePage() {
           status={status}
           selectedReport={selectedReport}
           onSelectReport={setSelectedReport}
+          onMapNavigation={handleMapNavigation}
         />
       </div>
     </div>

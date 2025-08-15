@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import ReportDetail from "./ReportDetail";
 
 const categories = {
@@ -21,11 +21,24 @@ export default function ReportsSidebar({
   status,
   selectedReport,
   onSelectReport,
+  onMapNavigation,
 }) {
   const [severity, setSeverity] = useState("");
   const [category, setCategory] = useState("");
   const [dateRange, setDateRange] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const searchTimeoutRef = useRef(null);
+
+  // Cleanup effect for search timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
@@ -58,18 +71,10 @@ export default function ReportsSidebar({
         }
       }
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        if (
-          ![r.location, r.description, r.category, r.severity, r.user_id]
-            .filter(Boolean)
-            .some((v) => v.toLowerCase().includes(q))
-        )
-          return false;
-      }
+      // Note: searchQuery is used for map navigation, not report filtering
       return true;
     });
-  }, [reports, severity, category, dateRange, searchQuery]);
+  }, [reports, severity, category, dateRange]);
 
   const formatDateTime = (date, time) => {
     try {
@@ -86,6 +91,88 @@ export default function ReportsSidebar({
       }).format(d);
     } catch {
       return date || "";
+    }
+  };
+
+  // Geocoding function using Nominatim (OpenStreetMap)
+  const geocodeLocation = async (locationQuery) => {
+    try {
+      setIsSearching(true);
+      setSearchError("");
+
+      // Add "Manila" to search if not already included for more relevant results
+      const searchTerm = locationQuery.toLowerCase().includes("manila")
+        ? locationQuery
+        : `${locationQuery}, Manila, Philippines`;
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          searchTerm
+        )}&limit=1&addressdetails=1`
+      );
+
+      if (!response.ok) {
+        throw new Error("Search service unavailable");
+      }
+
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        const coordinates = [parseFloat(result.lat), parseFloat(result.lon)];
+
+        if (onMapNavigation) {
+          onMapNavigation(coordinates, 16);
+        }
+
+        setSearchError("");
+      } else {
+        setSearchError("Location not found. Try a different search term.");
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      setSearchError("Unable to search location. Please try again.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search handler
+  const handleSearchChange = useCallback(
+    (value) => {
+      setSearchQuery(value);
+
+      // Clear previous timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      // Clear error when user starts typing
+      if (searchError) {
+        setSearchError("");
+      }
+
+      // Don't search if query is too short
+      if (value.trim().length < 3) {
+        return;
+      }
+
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        geocodeLocation(value.trim());
+      }, 1000); // Wait 1 second after user stops typing
+    },
+    [searchError]
+  );
+
+  // Handle Enter key press for immediate search
+  const handleSearchKeyPress = (e) => {
+    if (e.key === "Enter" && searchQuery.trim().length >= 3) {
+      // Clear timeout and search immediately
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      geocodeLocation(searchQuery.trim());
     }
   };
 
@@ -168,28 +255,57 @@ export default function ReportsSidebar({
         {/* Search Bar */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg
-              className="h-5 w-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            {isSearching ? (
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            )}
           </div>
           <input
             type="text"
-            placeholder="Search for a Location"
+            placeholder="Search for a Location (e.g., Makati, BGC, Quezon City)"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm text-black"
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            className={`block w-full pl-10 pr-3 py-3 border rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 text-sm text-black ${
+              searchError
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+            }`}
           />
+          {searchError && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <svg
+                className="w-5 h-5 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            </div>
+          )}
         </div>
+        {searchError && (
+          <div className="text-red-600 text-xs mt-1 px-1">{searchError}</div>
+        )}
 
         {/* Filter Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -385,7 +501,7 @@ export default function ReportsSidebar({
                           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                         />
                       </svg>
-                      {r.user_id || "John Doe"}
+                      {r.users?.name || "Unknown User"}
                     </div>
                   </div>
 
