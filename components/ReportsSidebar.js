@@ -31,7 +31,6 @@ export default function ReportsSidebar({
   const [searchError, setSearchError] = useState("");
   const searchTimeoutRef = useRef(null);
 
-  // Cleanup effect for search timeout
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -46,11 +45,10 @@ export default function ReportsSidebar({
         return false;
       if (category && (r.category || "") !== category) return false;
 
-      // Handle date range filtering
       if (dateRange) {
         const today = new Date();
         const reportDate = new Date(r.date);
-        if (!isFinite(reportDate)) return true; // Skip invalid dates
+        if (!isFinite(reportDate)) return true;
 
         const daysDiff = Math.floor(
           (today - reportDate) / (1000 * 60 * 60 * 24)
@@ -71,7 +69,6 @@ export default function ReportsSidebar({
         }
       }
 
-      // Note: searchQuery is used for map navigation, not report filtering
       return true;
     });
   }, [reports, severity, category, dateRange]);
@@ -94,13 +91,11 @@ export default function ReportsSidebar({
     }
   };
 
-  // Geocoding function using Nominatim (OpenStreetMap)
   const geocodeLocation = async (locationQuery) => {
     try {
       setIsSearching(true);
       setSearchError("");
 
-      // Add "Manila" to search if not already included for more relevant results
       const searchTerm = locationQuery.toLowerCase().includes("manila")
         ? locationQuery
         : `${locationQuery}, Manila, Philippines`;
@@ -137,38 +132,31 @@ export default function ReportsSidebar({
     }
   };
 
-  // Debounced search handler
   const handleSearchChange = useCallback(
     (value) => {
       setSearchQuery(value);
 
-      // Clear previous timeout
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
 
-      // Clear error when user starts typing
       if (searchError) {
         setSearchError("");
       }
 
-      // Don't search if query is too short
       if (value.trim().length < 3) {
         return;
       }
 
-      // Set new timeout for debounced search
       searchTimeoutRef.current = setTimeout(() => {
         geocodeLocation(value.trim());
-      }, 1000); // Wait 1 second after user stops typing
+      }, 1000);
     },
     [searchError]
   );
 
-  // Handle Enter key press for immediate search
   const handleSearchKeyPress = (e) => {
     if (e.key === "Enter" && searchQuery.trim().length >= 3) {
-      // Clear timeout and search immediately
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
@@ -185,13 +173,10 @@ export default function ReportsSidebar({
   };
 
   const handleUpdateReport = (updatedReport) => {
-    // In a real application, you would update the report in your backend
-    // For now, we'll just log the update and go back to the list
     console.log("Report updated:", updatedReport);
     onSelectReport(null);
   };
 
-  // If a specific report is selected, show the detail view
   if (selectedReport) {
     return (
       <ReportDetail
@@ -204,7 +189,6 @@ export default function ReportsSidebar({
 
   return (
     <div className="w-full max-w-none lg:max-w-2xl flex flex-col gap-4 lg:gap-6 p-4 lg:p-6 bg-white h-screen overflow-hidden">
-      {/* App Header */}
       <div className="flex flex-col items-center gap-2 pb-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center p-2">
@@ -221,7 +205,6 @@ export default function ReportsSidebar({
         <p className="text-gray-600 text-center">Citizens' Reports on Manila</p>
       </div>
 
-      {/* Reports Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Reports</h2>
         <div
@@ -250,9 +233,7 @@ export default function ReportsSidebar({
         </div>
       </div>
 
-      {/* Search and Filters */}
       <div className="flex flex-col gap-4">
-        {/* Search Bar */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             {isSearching ? (
@@ -307,9 +288,7 @@ export default function ReportsSidebar({
           <div className="text-red-600 text-xs mt-1 px-1">{searchError}</div>
         )}
 
-        {/* Filter Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Severity Filter */}
           <div className="relative">
             <select
               value={severity}
@@ -346,7 +325,6 @@ export default function ReportsSidebar({
             </div>
           </div>
 
-          {/* Category Filter */}
           <div className="relative">
             <select
               value={category}
@@ -379,7 +357,6 @@ export default function ReportsSidebar({
             </div>
           </div>
 
-          {/* Date Range Filter */}
           <div className="relative">
             <select
               value={dateRange}
@@ -418,7 +395,6 @@ export default function ReportsSidebar({
         </div>
       </div>
 
-      {/* Reports List */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
         {filteredReports.map((r) => (
           <div
@@ -427,7 +403,6 @@ export default function ReportsSidebar({
             onClick={() => handleReportClick(r)}
           >
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* Image */}
               <div className="w-full sm:w-32 h-40 sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
                 {r.url ? (
                   <img
@@ -454,7 +429,6 @@ export default function ReportsSidebar({
                 )}
               </div>
 
-              {/* Report Details */}
               <div className="flex-1 flex flex-col gap-2">
                 <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
                   {r.description || "Clogged Drainage"}

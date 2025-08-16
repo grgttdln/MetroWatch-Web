@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { db, realtime } from "../utils/supabase/api";
 import ReportsSidebar from "../components/ReportsSidebar";
 
-// Dynamically import react-leaflet pieces (client only)
 const MapContainer = dynamic(
   () => import("react-leaflet").then((m) => m.MapContainer),
   { ssr: false }
@@ -35,7 +34,6 @@ export default function HomePage() {
   const [selectedReport, setSelectedReport] = useState(null);
   const mapRef = useRef(null);
 
-  // Load initial reports
   useEffect(() => {
     (async () => {
       try {
@@ -58,7 +56,6 @@ export default function HomePage() {
     })();
   }, []);
 
-  // Realtime subscription
   useEffect(() => {
     const channel = realtime.subscribe("reports", (payload) => {
       setReports((prev) => {
@@ -76,7 +73,6 @@ export default function HomePage() {
     return () => realtime.unsubscribe(channel);
   }, []);
 
-  // Load leaflet & custom icons
   useEffect(() => {
     if (leafletLoaded) {
       setLeafletReady(true);
@@ -91,7 +87,6 @@ export default function HomePage() {
 
         const L = mod.default;
 
-        // Ensure leaflet CSS is loaded
         if (
           typeof window !== "undefined" &&
           !document.querySelector('link[href*="leaflet.css"]')
@@ -119,7 +114,6 @@ export default function HomePage() {
 
         leafletLoaded = true;
 
-        // Small delay to ensure everything is ready
         setTimeout(() => {
           if (!canceled) {
             setLeafletReady(true);
@@ -192,7 +186,6 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen overflow-hidden bg-gray-50">
-      {/* Mobile Toggle Button */}
       <button
         onClick={() => setShowSidebar(!showSidebar)}
         className="lg:hidden fixed top-4 left-4 z-[1001] bg-white/90 backdrop-blur-sm border border-gray-300 rounded-lg p-2 shadow-lg"
@@ -221,7 +214,6 @@ export default function HomePage() {
         </svg>
       </button>
 
-      {/* Map Section - Full width on mobile, 50% on desktop */}
       <div
         className={`relative flex-1 ${
           showSidebar ? "hidden lg:block" : "block"
@@ -234,7 +226,6 @@ export default function HomePage() {
             zoom={12}
             className="w-full h-full z-10"
             whenReady={(mapInstance) => {
-              // Access the actual Leaflet map instance through the container
               const leafletMap = mapInstance.target;
               mapRef.current = leafletMap;
               if (bounds) {
@@ -343,7 +334,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Sidebar - Full width on mobile, 50% on desktop */}
       <div
         className={`${
           showSidebar ? "block" : "hidden lg:block"

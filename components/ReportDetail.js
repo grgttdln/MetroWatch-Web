@@ -41,7 +41,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
     setIsSubmitting(true);
 
     try {
-      // Update the report status in the database
       const { data, error } = await db.update(
         "reports",
         { status: selectedStatus },
@@ -54,7 +53,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
 
       console.log("Report status updated successfully:", data);
 
-      // Update the local state if onUpdateReport callback is provided
       if (onUpdateReport && data && data[0]) {
         onUpdateReport({
           ...report,
@@ -65,7 +63,7 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
               id: Date.now(),
               text: comment,
               timestamp: new Date().toISOString(),
-              author: "Current User", // In a real app, this would be the logged-in user
+              author: "Current User",
             },
           ],
         });
@@ -73,7 +71,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
 
       setComment("");
 
-      // Show success message (you could add a toast notification here)
       alert("Report status updated successfully!");
     } catch (error) {
       console.error("Error updating report:", error);
@@ -92,7 +89,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
   return (
     <div className="w-full h-screen overflow-hidden bg-gradient-to-br from-blue-600 to-blue-800 text-white">
       <div className="flex flex-col h-full">
-        {/* Header */}
         <div className="flex items-center gap-4 p-6 border-b border-blue-500/30">
           <button
             onClick={onBack}
@@ -125,9 +121,7 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Report Title */}
           <div>
             <h2 className="text-2xl font-bold mb-2">
               {report.description || "Report Details"}
@@ -148,7 +142,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
             </div>
           </div>
 
-          {/* Report Image */}
           {report.url && (
             <div className="rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm">
               <img
@@ -159,7 +152,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
             </div>
           )}
 
-          {/* Details Section */}
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 space-y-4">
             <h3 className="text-lg font-semibold mb-4">Details:</h3>
 
@@ -216,7 +208,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
             </div>
           </div>
 
-          {/* Comments Section */}
           {report.comments && report.comments.length > 0 && (
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Previous Comments:</h3>
@@ -234,7 +225,6 @@ export default function ReportDetail({ report, onBack, onUpdateReport }) {
             </div>
           )}
 
-          {/* Comment Form */}
           <form
             onSubmit={handleSubmit}
             className="bg-white/10 backdrop-blur-sm rounded-lg p-6 space-y-4"
